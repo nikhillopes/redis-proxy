@@ -1,0 +1,45 @@
+version: "3"
+services:
+
+  redis:
+    image: redis
+    container_name: ${REDIS_HOST}
+
+  proxy:
+    image: openjdk:8
+    container_name: ${PROXY_HOST}
+    command: java -jar appP.jar
+    volumes:
+      - "./redis-proxy-1.0-SNAPSHOT.jar:/appP.jar"
+    depends_on:
+      - redis
+    ports:
+      - ${PROXY_PORT}:${PROXY_PORT}
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - PROXY_HOST=${PROXY_HOST}
+      - PROXY_PORT=${PROXY_PORT}
+      - PROXY_CAPACITY=${PROXY_CAPACITY}
+      - PROXY_EXPIRY=${PROXY_EXPIRY}
+      - PROXY_PARALLELISM=${PROXY_PARALLELISM}
+
+  tester:
+    image: openjdk:8
+    container_name: tester
+    command: bash -c "echo "Waiting" && sleep 2 && echo "Starting" && java -cp app.jar org.n.test.MultiThreadedRapidTester"
+    volumes:
+      - "./redis-proxy-1.0-SNAPSHOT.jar:/app.jar"
+    depends_on:
+      - redis
+      - proxy
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - PROXY_HOST=${PROXY_HOST}
+      - PROXY_PORT=${PROXY_PORT}
+      - TEST_PARALLELISM=${TEST_PARALLELISM}
+      - TEST_SLEEP=${TEST_SLEEP}
+      - TEST_OPS=${TEST_OPS}
+      - TEST_SLEEP_TIME=${TEST_SLEEP_TIME}
+

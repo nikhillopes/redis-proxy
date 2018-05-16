@@ -1,0 +1,2 @@
+test:
+	run/buildAndRunTests.sh
