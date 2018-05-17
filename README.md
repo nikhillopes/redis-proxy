@@ -54,7 +54,7 @@ The proxy parallelism, proxy capacity, key expiry, querying rate, number of task
 
 The logs for the tester is at ```run/tester.log``` and for the proxy is at ```proxy.log```.
 
-At the end of the test the make command will display stats for the tests, like number of queries, number of cache hits and missed. Stats from the tester a also displayed.
+At the end of the test the make command will display stats for the tests, like number of queries, number of cache hits and misses. Stats from the tester are also displayed.
 
 ## Time Spent
 - Understand requirements and coming up with design : 1 hr
