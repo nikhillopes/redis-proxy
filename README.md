@@ -15,7 +15,7 @@ Eviction for both expiry and least recently used is lazy and only done when we n
 
 Time Complexity:
 - GET : O(1)
-- SET : O(k) + log(n)
+- SET : O(k) + O(log(n))
   - k = number of expired keys till a non expired key id found in eviction heap (Only when space is needed).
   - n = number of keys in eviction heap.
   
