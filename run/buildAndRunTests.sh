@@ -30,7 +30,6 @@ docker container stop proxy
 docker exec -it red redis-cli FLUSHALL
 docker container stop red
 
-set -x
 echo "************************************PROXY STATS************************************"
 tail -n $(($(($((PROXY_PARALLELISM + 1)) * 11)) + 2)) proxy.log
 

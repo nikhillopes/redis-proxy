@@ -169,7 +169,7 @@ public class MultiThreadedRapidTester {
       }
     }
     threadPool.shutdown();
-    threadPool.awaitTermination(10, TimeUnit.MINUTES);
+    threadPool.awaitTermination(Integer.MAX_VALUE, TimeUnit.MINUTES);
 
     lock.lock();
     log.info("SET : " + SET);
