@@ -14,20 +14,23 @@ import lombok.extern.slf4j.Slf4j;
 public class Cache {
 
   public Lock lock;
+  public int cacheMiss;
+  public int cacheHit;
+  public int getExpired;
+  public int lruEviction;
+  public int expiryEviction;
+  public int update;
+  public int write;
+
   private int capacity;
   private long expiry;
   private int cacheId;
+
   private Map<String, CacheNode> cache;
   private Queue<KeyAndExpiry> evictionHeap;
 
   private CacheNode head = null;
   private CacheNode tail = null;
-
-  public int cacheMiss;
-  public int cacheHit;
-  public int expired;
-  public int update;
-  public int write;
 
   public Cache(int capacity, long expiry, int cacheId) {
     this.capacity = capacity;
@@ -67,7 +70,8 @@ public class Cache {
       log.info(cacheId + "GET : " + key + " expired : " + currentTs);
       cache.remove(key);
       removeNode(cacheNode);
-      expired++;
+      getExpired++;
+      expiryEviction++;
       return null;
     } else {
       log.info(cacheId + "GET : " + key + " found : " + currentTs);
@@ -120,13 +124,16 @@ public class Cache {
   }
 
   public void display(boolean stats) {
-    log.info(cacheId + " GET : " + (cacheHit + cacheMiss + expired));
+    log.info(cacheId + " GET : " + (cacheHit + cacheMiss + getExpired));
     log.info(cacheId + " GET HIT : " + (cacheHit));
     log.info(cacheId + " GET MISS : " + (cacheMiss));
-    log.info(cacheId + " GET EXPIRED : " + (expired));
+    log.info(cacheId + " GET EXPIRED : " + (getExpired));
     log.info(cacheId + " SET ALL : " + (write + update));
     log.info(cacheId + " SET WRITE : " + (write));
     log.info(cacheId + " SET UPDATE : " + (update));
+    log.info(cacheId + " EVICT ALL : " + (lruEviction + expiryEviction));
+    log.info(cacheId + " EVICT LRU : " + (lruEviction));
+    log.info(cacheId + " EVICT EXPIRY : " + (expiryEviction));
 
   }
 
@@ -189,6 +196,7 @@ public class Cache {
           log.info(cacheId + "inCache but Expired");
           CacheNode cacheNodeToRemove = cache.remove(evictionCandidate.getKey());
           removeNode(cacheNodeToRemove);
+          expiryEviction++;
         }
 
         if (cache.size() >= capacity && !cache.containsKey(newKey)) {
@@ -198,6 +206,7 @@ public class Cache {
           cache.remove(lruNode.getKey());
           removeNode(lruNode);
           log.info(cacheId + "LRUEviction : " + lruNode.toString());
+          lruEviction++;
         }
 
         if (!isExpired && !isDupInEvictionHeap) {

@@ -8,6 +8,7 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +30,8 @@ public class Proxy {
   private InetSocketAddress redisInstanceAddress;
   private int maxConnections;
   private JedisPool jedisPool;
+  private int cacheCapacity;
+  private long entryExpiry;
 
   private Map<Integer, Cache> cache;
 
@@ -39,15 +42,11 @@ public class Proxy {
       long entryExpiry,
       int maxConnections) {
 
+    this.cacheCapacity = cacheCapacity;
+    this.entryExpiry = entryExpiry;
     this.maxConnections = maxConnections;
     this.listeningAddress = listeningAddress;
     this.redisInstanceAddress = redisInstanceAddress;
-
-    this.cache = new ConcurrentHashMap<>(maxConnections);
-
-    for (int i = 0; i < maxConnections; i++) {
-      this.cache.put(i, new Cache(cacheCapacity, entryExpiry, i));
-    }
 
   }
 
@@ -57,6 +56,14 @@ public class Proxy {
 
   private static synchronized boolean ended() {
     return stop;
+  }
+
+  private static int[] getCapacities(int capacity, int parallelism) {
+    int[] arr = new int[parallelism];
+    for (int i = 0; i < parallelism; i++) {
+      capacity -= arr[i] = (capacity + parallelism - i - 1) / (parallelism - i);
+    }
+    return arr;
   }
 
   private int getBucket(String key) {
@@ -71,9 +78,11 @@ public class Proxy {
 
       AtomicInteger cacheMiss = new AtomicInteger();
       AtomicInteger cacheHit = new AtomicInteger();
-      AtomicInteger expired = new AtomicInteger();
+      AtomicInteger getExpired = new AtomicInteger();
       AtomicInteger update = new AtomicInteger();
       AtomicInteger write = new AtomicInteger();
+      AtomicInteger lruEviction = new AtomicInteger();
+      AtomicInteger expiryEviction = new AtomicInteger();
 
       cache.forEach((key, value) -> {
         value.lock.lock();
@@ -82,26 +91,40 @@ public class Proxy {
         value.clear();
         cacheMiss.set(cacheMiss.get() + value.cacheMiss);
         cacheHit.set(cacheHit.get() + value.cacheHit);
-        expired.set(expired.get() + value.expired);
+        getExpired.set(getExpired.get() + value.getExpired);
         update.set(update.get() + value.update);
         write.set(write.get() + value.write);
+        lruEviction.set(lruEviction.get() + value.lruEviction);
+        expiryEviction.set(expiryEviction.get() + value.expiryEviction);
         value.lock.unlock();
       });
 
       log.info("* Aggregated Cache Stats");
-      log.info("* GET : " + (cacheHit.get() + cacheMiss.get() + expired.get()));
+      log.info("* GET : " + (cacheHit.get() + cacheMiss.get() + getExpired.get()));
       log.info("* GET HIT : " + (cacheHit.get()));
       log.info("* GET MISS : " + (cacheMiss.get()));
-      log.info("* GET EXPIRED : " + (expired.get()));
+      log.info("* GET EXPIRED : " + (getExpired.get()));
       log.info("* SET ALL : " + (write.get() + update.get()));
       log.info("* SET WRITE : " + (write.get()));
       log.info("* SET UPDATE : " + (update).get());
+      log.info("* EVICT ALL : " + (lruEviction.get() + expiryEviction.get()));
+      log.info("* EVICT LRU : " + (lruEviction).get());
+      log.info("* EVICT EXPIRY : " + (expiryEviction.get()));
     }));
 
 
   }
 
   public void startProxy() throws IOException, InterruptedException {
+
+    log.info("Creating caches");
+    this.cache = new ConcurrentHashMap<>(maxConnections);
+
+    int[] capacities = getCapacities(cacheCapacity, maxConnections);
+    log.info("Capacities of partitions : " + Arrays.toString(capacities));
+    for (int i = 0; i < maxConnections; i++) {
+      this.cache.put(i, new Cache(capacities[i], entryExpiry, i));
+    }
 
     log.info("Connecting to redis at : " + redisInstanceAddress.getAddress().toString() + ":" +
         redisInstanceAddress.getPort());

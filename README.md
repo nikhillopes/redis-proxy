@@ -37,14 +37,16 @@ Supported commands :
 ## The Test
 Running ```make test``` will launch a redis instance, the proxy and a multi threaded client for rapid querying.
 
-Each task in the tester will perform one of the following operation :
+Each task in the tester will perform one of the following operations :
 - Write a key and value to Jedis, bypassing the proxy
 - Get a value from the proxy
-- Update a key and query the same key from the proxy
+- Update a key in redis
 
-The proxy parallelism, proxy capacity, key expiry, querying rate, number of test operation, clients threads can be modified by changing environment variables in buildAndRunTests.sh. 
+The proxy parallelism, proxy capacity, key expiry, querying rate, number of tasks, clients threads can be modified by changing environment variables in buildAndRunTests.sh.
 
-At the end of the test the make command will display stats for the tests, like number of queries, number of cache hits and missed. Stats from the tester a also displayed.  
+The logs for the tester is at ```run/tester.log``` and for the proxy is at ```proxy.log```.
+
+At the end of the test the make command will display stats for the tests, like number of queries, number of cache hits and missed. Stats from the tester a also displayed.
 
 ## Time Spent
 - Understand requirements and coming up with design : 1 hr
@@ -60,7 +62,6 @@ At the end of the test the make command will display stats for the tests, like n
 - Documentation : 30 mins
 
 ## Improvements
-- Optimize cache objects to account of decrease of keys in each cache due to partitioning.
 - Get a signal from master(redis) for key update and key deletion. I think this will significantly reduce return of stale values. 
 
 

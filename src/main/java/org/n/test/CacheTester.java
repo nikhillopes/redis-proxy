@@ -71,11 +71,11 @@ public class CacheTester {
       cache.get(key);
     }
 
-    //cache.set(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-
     for (String key : access) {
       if (cache.get(key) != null) {
-        log.error("Not Expired");
+        log.error(key + " not Expired");
+      } else {
+        log.info(key + " Expired");
       }
     }
   }
